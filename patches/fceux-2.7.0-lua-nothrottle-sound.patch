@@ -1,0 +1,39 @@
+diff --git a/src/drivers/Qt/sdl-throttle.cpp b/src/drivers/Qt/sdl-throttle.cpp
+index d60107e..a5d964a 100644
+--- a/src/drivers/Qt/sdl-throttle.cpp
++++ b/src/drivers/Qt/sdl-throttle.cpp
+@@ -24,6 +24,7 @@
+ #include "Qt/NetPlay.h"
+ #include "Qt/throttle.h"
+ #include "utils/timeStamp.h"
++#include "fceulua.h"
+ 
+ #if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+ #include <time.h>
+@@ -371,6 +372,10 @@ SpeedThrottle(void)
+ 	bool isEmuPaused = FCEUI_EmulationPaused() ? true : false;
+ 	bool noWaitActive = (NoWaiting & 0x01) ? true : false;
+ 	bool turboActive = (turbo || noWaitActive || NetPlaySkipWait());
++#ifdef _S9XLUA_H
++	// A Lua script asking for no throttle paces frames itself.
++	turboActive = turboActive || FCEU_LuaSpeed();
++#endif
+ 
+ 	// If Emulator is paused, don't waste CPU cycles spinning on nothing.
+ 	if ( !isEmuPaused && ((g_fpsScale >= 32) || turboActive) )
+diff --git a/src/lua-engine.cpp b/src/lua-engine.cpp
+index b337513..71b29c0 100644
+--- a/src/lua-engine.cpp
++++ b/src/lua-engine.cpp
+@@ -464,8 +464,10 @@ static int emu_speedmode(lua_State *L) {
+ 		else if (speedmode == SPEED_TURBO)				//adelikat: Making turbo actually use turbo.
+ 			FCEUD_TurboOn();							//Turbo and max speed are two different results. Turbo employs frame skipping and sound bypassing if mute turbo option is enabled.
+ 												//This makes it faster but with frame skipping. Therefore, maximum is still a useful feature, in case the user is recording an avi or making screenshots (or something else that needs all frames)
++		else if (speedmode == SPEED_NOTHROTTLE)
++			FCEUD_SetEmulationSpeed(EMUSPEED_NORMAL);   // SpeedThrottle skips waiting for Lua; sound stays at 1x
+ 		else
+-			FCEUD_SetEmulationSpeed(EMUSPEED_FASTEST);  //TODO: Make nothrottle turn off throttle, or remove the option
++			FCEUD_SetEmulationSpeed(EMUSPEED_FASTEST);
+ 	return 0;
+ }
+ 

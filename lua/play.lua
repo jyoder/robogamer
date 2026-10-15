@@ -1,6 +1,7 @@
 -- Starts a run: the workers, FCEUX running lua/main.lua, and the metronome that paces it.
--- FCEUX's own speed throttle never advances a frame on this macOS build, so the emulator runs
--- unthrottled and waits for one byte from the metronome before each frame.
+-- FCEUX's own speed throttle never advances a frame on macOS, so the emulator runs unthrottled
+-- and waits for one byte from the metronome before each frame. The patched build in build/fceux
+-- keeps sound at normal speed while unthrottled; stock FCEUX garbles it.
 local root = io.popen("cd \"$(dirname '" .. arg[0] .. "')/..\" && pwd"):read("*l")
 package.path = root .. "/lua/?.lua;" .. package.path
 
@@ -28,6 +29,8 @@ assert(os.execute(string.format("mkfifo '%s'", ticks_path)) == 0)
 
 -- FCEUX reads $FCEUX_HOME/.fceux/fceux.cfg, so runs get their own settings instead of the user's.
 -- The Qt build sizes its window from this file and ignores --xscale.
+local fceux = root .. "/" .. config.fceux
+assert(io.open(fceux, "rb"), fceux .. " is missing; run `mise run build:fceux`"):close()
 local fceux_home = exchange_dir .. "/fceux"
 assert(os.execute(string.format("mkdir -p '%s/.fceux'", fceux_home)) == 0)
 local fceux_cfg = assert(io.open(fceux_home .. "/.fceux/fceux.cfg", "w"))
@@ -48,8 +51,8 @@ end
 
 assert(os.execute(string.format(
   "FCEUX_HOME='%s' ROBOGAMER_RUN_DIR='%s' ROBOGAMER_EXCHANGE_DIR='%s' ROBOGAMER_POLICY=%s " ..
-  "fceux --loadlua '%s/lua/main.lua' '%s/roms/smb.nes' >'%s/fceux.log' 2>&1 &",
-  fceux_home, run_dir, exchange_dir, policy, root, root, run_dir)) == 0)
+  "'%s' --loadlua '%s/lua/main.lua' '%s/roms/smb.nes' >'%s/fceux.log' 2>&1 &",
+  fceux_home, run_dir, exchange_dir, policy, fceux, root, root, run_dir)) == 0)
 
 io.stdout:setvbuf("line")
 print("run " .. run_dir)

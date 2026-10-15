@@ -1,9 +1,10 @@
 [tools]
+cmake = "3.30.5"
 luajit = "2.1.1744318430"
 
 [env]
 _.file = ".env"
-# Homebrew's fceux needs qtbase's plugins even when another Qt is the one linked into the prefix.
+# FCEUX needs qtbase's plugins even when another Qt is the one linked into the prefix.
 QT_PLUGIN_PATH = "/opt/homebrew/opt/qtbase/share/qt/plugins"
 
 [tasks.test]
@@ -15,12 +16,31 @@ description = "Run unit tests plus live calls to the TypeSafe API"
 env = { LIVE = "1" }
 run = "luajit tests/run.lua"
 
+[tasks."build:fceux"]
+description = "Build FCEUX 2.7.0 with patches/ applied into build/fceux (uses Homebrew fceux's dependencies)"
+sources = ["patches/*.patch"]
+outputs = ["build/fceux/fceux"]
+run = """
+set -e
+rm -rf build/fceux-src
+git clone -q --depth 1 --branch fceux-2.7.0 https://github.com/TASEmulators/fceux.git build/fceux-src
+for patch in patches/*.patch; do git -C build/fceux-src apply "$PWD/$patch"; done
+cmake -S build/fceux-src -B build/fceux-src/build -DQT6=ON -DPUBLIC_RELEASE=1 -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="/opt/homebrew/opt/qtbase;/opt/homebrew" -DQt6_DIR=/opt/homebrew/opt/qtbase/lib/cmake/Qt6 \
+  -DCMAKE_CXX_COMPILER_LAUNCHER="$PWD/scripts/qtbase-first.sh"
+cmake --build build/fceux-src/build -j "$(sysctl -n hw.ncpu)"
+mkdir -p build/fceux
+cp build/fceux-src/build/src/fceux.app/Contents/MacOS/fceux build/fceux/fceux
+"""
+
 [tasks.play]
 description = "Let Jev play World 1-1 in FCEUX in real time"
+depends = ["build:fceux"]
 run = "luajit lua/play.lua jev"
 
 [tasks."play:baseline"]
 description = "Play World 1-1 with the scripted baseline (hold right and B, jump every second)"
+depends = ["build:fceux"]
 run = "luajit lua/play.lua baseline"
 
 [tasks.score]
