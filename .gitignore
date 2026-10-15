@@ -1,5 +1,15 @@
+# Secrets
 .env
+
+# ROMs and emulator savestates (FCEUX slots 0-9 and named states, Mesen)
 *.nes
-*.fc0
+*.fc[0-9]
 *.fcs
+*.mss
+
+# Run output and worker job/result files
 runs/
+tmp/
+
+# macOS
+.DS_Store
