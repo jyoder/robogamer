@@ -1,0 +1,5 @@
+.env
+*.nes
+*.fc0
+*.fcs
+runs/

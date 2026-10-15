@@ -1,0 +1,14 @@
+[tools]
+luajit = "2.1.1744318430"
+
+[env]
+_.file = ".env"
+
+[tasks.test]
+description = "Run unit tests"
+run = "luajit tests/run.lua"
+
+[tasks."test:live"]
+description = "Run unit tests plus live calls to the TypeSafe API"
+env = { LIVE = "1" }
+run = "luajit tests/run.lua"
