@@ -2,9 +2,17 @@
 local root = arg[0]:match("^(.*)/tests/[^/]+$") or "."
 package.path = root .. "/lua/?.lua;" .. root .. "/tests/?.lua;" .. package.path
 
-local suites = { "image_test", "png_test", "typesafe_test", "jev_policy_test" }
+local suites = {}
+local listing = io.popen("ls '" .. root .. "/tests'")
+for name in listing:lines() do
+  local suite = name:match("^(.+_test)%.lua$")
+  if suite then
+    suites[#suites + 1] = suite
+  end
+end
+listing:close()
 if os.getenv("LIVE") == "1" then
-  suites[#suites + 1] = "live_test"
+  suites[#suites + 1] = "live"
 end
 
 local passed, failed = 0, 0
