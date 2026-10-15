@@ -39,7 +39,7 @@ local function read_png(run_dir, frame)
 end
 
 local runs = #arg > 0 and arg or runs_with_frames()
-local by_label = { jump = {}, walk = {} }
+local by_label = { jump = {}, stuck = {}, walk = {} }
 for _, run_dir in ipairs(runs) do
   for _, case in ipairs(cases.collect(run_dir)) do
     table.insert(by_label[case.label], case)
@@ -50,12 +50,15 @@ local client = typesafe.client({ model = config.model })
 local press_at = config.controller.press_at
 local tally = {}
 
-local function count(key, a, played_a, pressed_is_right)
-  local t = tally[key] or { n = 0, a = 0, played_a = 0, right = 0 }
+local function count(key, controls, played, pressed_is_right)
+  local a = controls.a
+  local t = tally[key] or { n = 0, a = 0, played_a = 0, b = 0, played_b = 0, right = 0 }
   tally[key] = t
   t.n = t.n + 1
   t.a = t.a + a
-  t.played_a = t.played_a + played_a
+  t.played_a = t.played_a + played.a
+  t.b = t.b + controls.b
+  t.played_b = t.played_b + played.b
   if (a > press_at) == pressed_is_right then
     t.right = t.right + 1
   end
@@ -67,8 +70,7 @@ for kind, list in pairs(by_label) do
     local request = jev_policy.build(worker.observation(case.job, function(frame) return read_png(case.run_dir, frame) end))
     local response, err = client:systemone(request)
     if response then
-      local a = jev_policy.decode(response.answers).a
-      count(kind, a, case.played_a, kind == "jump")
+      count(kind, jev_policy.decode(response.answers), case.played, kind ~= "walk")
     else
       failures = failures + 1
       io.stderr:write(err, "\n")
@@ -84,8 +86,8 @@ end
 table.sort(keys)
 for _, key in ipairs(keys) do
   local t = tally[key]
-  print(string.format("  %-14s n=%3d  mean A %.2f (when played %.2f)  correct %d%%",
-    key, t.n, t.a / t.n, t.played_a / t.n, math.floor(100 * t.right / t.n + 0.5)))
+  print(string.format("  %-6s n=%3d  mean A %.2f (when played %.2f)  correct %d%%  mean B %.2f (when played %.2f)",
+    key, t.n, t.a / t.n, t.played_a / t.n, math.floor(100 * t.right / t.n + 0.5), t.b / t.n, t.played_b / t.n))
 end
 if tally.jump and tally.walk then
   print(string.format("  balanced accuracy %d%%",

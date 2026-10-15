@@ -22,6 +22,7 @@ local function fixture_run()
     { frame = 404, a = 0.9 },
     { frame = 420, a = 0.2, in_air = true },
     { frame = 430, a = 0.2, missing_png = true },
+    { frame = 600, a = 0.4, stuck = true },
   }
   for seq, moment in ipairs(moments) do
     if not moment.missing_png then
@@ -32,7 +33,7 @@ local function fixture_run()
       frame = moment.frame,
       controls = { dpad = "right", a = moment.a, b = 0, start = 0, select = 0 },
       job = { frame = moment.frame, frames = { { frame = moment.frame, seconds_ago = 0 } },
-        screen = "playing", in_air = moment.in_air or false },
+        screen = "playing", in_air = moment.in_air or false, stuck = moment.stuck or false },
     }))
   end
   return dir
@@ -52,12 +53,13 @@ return {
     check.eq(labels[404], nil, "jumping with no death after says nothing")
     check.eq(labels[420], nil, "in the air")
     check.eq(labels[430], nil, "frames not kept")
-    check.eq(#found, 2, "case count")
+    check.eq(labels[600], "stuck", "blocked on the ground")
+    check.eq(#found, 3, "case count")
   end },
-  { "a case carries the A played at the time", function()
+  { "a case carries the controls played at the time", function()
     for _, case in ipairs(cases.collect(fixture_run())) do
       if case.label == "jump" then
-        check.eq(case.played_a, 0.3, "played A")
+        check.eq(case.played.a, 0.3, "played A")
       end
     end
   end },

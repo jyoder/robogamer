@@ -26,6 +26,17 @@ box:reset()
 local ticks_path = exchange_dir .. "/ticks"
 assert(os.execute(string.format("mkfifo '%s'", ticks_path)) == 0)
 
+-- FCEUX reads $FCEUX_HOME/.fceux/fceux.cfg, so runs get their own settings instead of the user's.
+-- The Qt build sizes its window from this file and ignores --xscale.
+local fceux_home = exchange_dir .. "/fceux"
+assert(os.execute(string.format("mkdir -p '%s/.fceux'", fceux_home)) == 0)
+local fceux_cfg = assert(io.open(fceux_home .. "/.fceux/fceux.cfg", "w"))
+fceux_cfg:write(string.format(
+  "SDL.WinSizeX = %d\nSDL.WinSizeY = %d\nSDL.XScale = %d\nSDL.YScale = %d\nSDL.Sound = %d\nSDL.Sound.Volume = %d\n",
+  256 * config.window_scale, 240 * config.window_scale + 5, config.window_scale, config.window_scale,
+  config.volume > 0 and 1 or 0, config.volume))
+fceux_cfg:close()
+
 if policy == "jev" then
   local frames_dir = run_dir .. "/frames"
   assert(os.execute(string.format("mkdir -p '%s'", frames_dir)) == 0)
@@ -36,9 +47,9 @@ if policy == "jev" then
 end
 
 assert(os.execute(string.format(
-  "ROBOGAMER_RUN_DIR='%s' ROBOGAMER_EXCHANGE_DIR='%s' ROBOGAMER_POLICY=%s " ..
-  "fceux --sound 0 --loadlua '%s/lua/main.lua' '%s/roms/smb.nes' >'%s/fceux.log' 2>&1 &",
-  run_dir, exchange_dir, policy, root, root, run_dir)) == 0)
+  "FCEUX_HOME='%s' ROBOGAMER_RUN_DIR='%s' ROBOGAMER_EXCHANGE_DIR='%s' ROBOGAMER_POLICY=%s " ..
+  "fceux --loadlua '%s/lua/main.lua' '%s/roms/smb.nes' >'%s/fceux.log' 2>&1 &",
+  fceux_home, run_dir, exchange_dir, policy, root, root, run_dir)) == 0)
 
 io.stdout:setvbuf("line")
 print("run " .. run_dir)

@@ -23,7 +23,7 @@ return {
   { "read names each RAM value and combines the x page and offset", function()
     local memory = {
       [0x006D] = 2, [0x0086] = 0x10, [0x001D] = 1, [0x0770] = 1, [0x000E] = 0x08,
-      [0x00B5] = 1, [0x075A] = 3, [0x075F] = 0, [0x0760] = 2,
+      [0x00B5] = 1, [0x075A] = 3, [0x075F] = 0, [0x0760] = 2, [0x0057] = 0,
     }
     local s = telemetry.read(function(address) return memory[address] end)
     check.eq(s.x, 528, "x")
@@ -34,6 +34,15 @@ return {
     check.eq(s.lives, 3, "lives")
     check.eq(s.world, 0, "world")
     check.eq(s.level, 2, "level")
+  end },
+  { "read gives x_speed a sign, negative moving left", function()
+    local speed = 0x28
+    local function readbyte(address)
+      return address == 0x0057 and speed or 0
+    end
+    check.eq(telemetry.read(readbyte).x_speed, 40, "running right")
+    speed = 0xF0
+    check.eq(telemetry.read(readbyte).x_speed, -16, "moving left")
   end },
   { "facts maps each game mode to a screen", function()
     check.eq(telemetry.facts(snapshot({ mode = 0 })).screen, "title", "mode 0")

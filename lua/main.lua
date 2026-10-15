@@ -5,6 +5,7 @@ package.path = lua_dir .. "/?.lua;" .. package.path
 local config = require("config")
 local mailbox = require("mailbox")
 local controller = require("controller")
+local overlay = require("overlay")
 local telemetry = require("telemetry")
 local json = require("vendor.dkjson")
 
@@ -28,6 +29,7 @@ local oldest_frame_ago = math.max(unpack(config.frames_ago))
 local shots, has_shot = {}, {}
 local posted_frame = {}
 local seq, applied_seq, applied_frame = 0, 0, 0
+local applied_result
 
 local DEATH_TEXT = { pit = "fell into a pit", enemy = "was hit by an enemy" }
 local deaths_seen = {}
@@ -45,7 +47,8 @@ local function died_near(x)
 end
 
 local function post_job(facts, x)
-  box:write_frame(frame, gui.gdscreenshot())
+  -- true reads the emulator's own frame, without the overlay drawn on top of it.
+  box:write_frame(frame, gui.gdscreenshot(true))
   shots[#shots + 1] = frame
   has_shot[frame] = true
   while shots[1] < frame - oldest_frame_ago - config.max_staleness_frames do
@@ -86,7 +89,7 @@ local function apply_answers(facts)
       applied_seq = s
       if result.controls then
         pad:apply(result.controls, facts.screen, frame)
-        applied_frame = frame
+        applied_frame, applied_result = frame, result
         log({ type = "applied", seq = s, age = frame - result.frame })
       end
       return
@@ -154,7 +157,7 @@ local function rewind()
   saved_frame = frame
 end
 
-local was_dying, furthest_x, deaths = false, 0, 0
+local was_dying, was_in_air, furthest_x, deaths = false, false, 0, 0
 
 -- Plays one frame; returns false when the run is over.
 local function play_frame()
@@ -180,6 +183,10 @@ local function play_frame()
     end
   end
   was_dying = dying
+  if facts.screen == "playing" and facts.in_air and not was_in_air then
+    log({ type = "takeoff", x = snapshot.x, speed = snapshot.x_speed })
+  end
+  was_in_air = facts.in_air
   if facts.level_complete then
     log({ type = "level_complete" })
     return false
@@ -199,7 +206,17 @@ local function play_frame()
   else
     baseline(facts)
   end
-  joypad.set(1, joypad_for(facts))
+  local keys = joypad_for(facts)
+  if policy == "jev" then
+    overlay.draw(gui, {
+      result = applied_result,
+      frame = frame,
+      keys = keys,
+      press_at = config.controller.press_at,
+      stuck = tracker:stuck(frame),
+    })
+  end
+  joypad.set(1, keys)
   emu.frameadvance()
   return true
 end

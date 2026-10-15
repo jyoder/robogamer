@@ -22,8 +22,13 @@ local function frames_kept(run_dir, job)
   return true
 end
 
--- Returns "jump", "walk", or nil when the moment is ambiguous.
-local function label(frame, a, deaths)
+-- Returns "jump", "stuck" (blocked on the ground, so he should jump), "walk", or nil when the
+-- moment is ambiguous.
+local function label(job, a, deaths)
+  if job.stuck then
+    return "stuck"
+  end
+  local frame = job.frame
   for _, death in ipairs(deaths) do
     if death.frame >= frame and death.frame - frame <= cases.SAFE_FRAMES then
       if death.cause == "enemy" and death.frame - frame <= cases.JUMP_WINDOW_FRAMES then
@@ -37,7 +42,8 @@ local function label(frame, a, deaths)
   end
 end
 
--- Returns { label, run_dir, job, played_a } for each labeled moment in the run.
+-- Returns { label, run_dir, job, played } for each labeled moment in the run; played is the
+-- controls Jev answered at the time.
 function cases.collect(run_dir)
   local deaths = {}
   for _, event in ipairs(run_log.events(run_dir)) do
@@ -49,9 +55,9 @@ function cases.collect(run_dir)
   for _, result in ipairs(run_log.results(run_dir)) do
     local job = result.job
     if job and result.controls and job.screen == "playing" and not job.in_air and frames_kept(run_dir, job) then
-      local kind = label(job.frame, result.controls.a, deaths)
+      local kind = label(job, result.controls.a, deaths)
       if kind then
-        found[#found + 1] = { label = kind, run_dir = run_dir, job = job, played_a = result.controls.a }
+        found[#found + 1] = { label = kind, run_dir = run_dir, job = job, played = result.controls }
       end
     end
   end

@@ -28,6 +28,10 @@ return {
   -- Jobs list how Mario died from `behind` pixels behind him to `ahead` pixels ahead, newest `keep`.
   death_memory = { behind = 64, ahead = 256, keep = 3 },
 
+  -- FCEUX window size as a multiple of the 256x240 screen, and sound volume from 0 (off) to 256.
+  window_scale = 3,
+  volume = 256,
+
   max_run_seconds = 420,
   worker_idle_seconds = 30,
   exchange_dir = "tmp",

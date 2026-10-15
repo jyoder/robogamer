@@ -4,6 +4,7 @@ local telemetry = {}
 local RAM = {
   x_page = 0x006D,
   x_offset = 0x0086,
+  x_speed = 0x0057,
   float_state = 0x001D,
   mode = 0x0770,
   player_state = 0x000E,
@@ -19,10 +20,16 @@ local FLAGPOLE_FLOAT = 3
 local DYING_STATES = { [0x0B] = true, [0x06] = true }
 local LOWEST_ONSCREEN_Y_PAGE = 1
 
+local function signed(byte)
+  return byte >= 128 and byte - 256 or byte
+end
+
 -- readbyte: function(address) -> number, memory.readbyte in FCEUX.
+-- x_speed is positive moving right; walking tops out near 24 and running near 40.
 function telemetry.read(readbyte)
   return {
     x = readbyte(RAM.x_page) * 256 + readbyte(RAM.x_offset),
+    x_speed = signed(readbyte(RAM.x_speed)),
     float_state = readbyte(RAM.float_state),
     mode = readbyte(RAM.mode),
     player_state = readbyte(RAM.player_state),
