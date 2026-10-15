@@ -43,6 +43,11 @@ description = "Play World 1-1 with the scripted baseline (hold right and B, jump
 depends = ["build:fceux"]
 run = "luajit lua/play.lua baseline"
 
+[tasks.bench]
+description = "Play several runs on Mario's lives alone, no rewinds, and summarize them (args: [runs] [jev|baseline])"
+depends = ["build:fceux"]
+run = "luajit lua/bench.lua"
+
 [tasks.score]
 description = "Score the current prompt against labeled moments from runs that kept their frames"
 run = "luajit lua/score.lua"

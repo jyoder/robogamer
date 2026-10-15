@@ -22,7 +22,7 @@ local function fixture_run()
     write(string.format("%s/results/%d.json", dir, result.seq), json.encode(result))
   end
   local events = {
-    { type = "start", policy = "jev" },
+    { type = "start", policy = "jev", rewinds = false },
     { type = "applied", age = 9 },
     { type = "applied", age = 11 },
     { type = "applied", age = 14 },
@@ -30,7 +30,7 @@ local function fixture_run()
     { type = "death", x = 1139, furthest_x = 1139 },
     { type = "death", x = 1140, furthest_x = 1150 },
     { type = "level_complete" },
-    { type = "end", jobs_posted = 40, furthest_x = 3168 },
+    { type = "end", jobs_posted = 40, furthest_x = 3168, frame = 3000 },
   }
   local lines = {}
   for i, event in ipairs(events) do
@@ -48,6 +48,8 @@ return {
     check.eq(s.errors["HTTP 500: boom"], 1, "error count")
     check.eq(s.jobs_posted, 40, "jobs posted")
     check.eq(s.policy, "jev", "policy")
+    check.eq(s.rewinds, false, "rewinds")
+    check.eq(s.frames, 3000, "frames played")
   end },
   { "reports latency of successful calls and answer age", function()
     local s = report.summarize(fixture_run())
@@ -63,5 +65,19 @@ return {
     check.eq(s.deaths_at[1120], 2, "deaths at the first pit")
     check.eq(s.furthest_x, 3168, "furthest x")
     check.eq(s.level_complete, true, "level complete")
+  end },
+  { "combine counts completions and takes medians across runs", function()
+    local combined = report.combine({
+      { level_complete = true, deaths = 1, furthest_x = 3168, frames = 2000, deaths_at = { [1120] = 1 } },
+      { deaths = 3, furthest_x = 1130, frames = 1500, deaths_at = { [1120] = 2, [288] = 1 } },
+      { level_complete = true, deaths = 0, furthest_x = 3168, frames = 1900, deaths_at = {} },
+    })
+    check.eq(combined.runs, 3, "runs")
+    check.eq(combined.completed, 2, "completed")
+    check.eq(combined.deaths.median, 1, "median deaths")
+    check.eq(combined.furthest_x.median, 3168, "median furthest x")
+    check.eq(combined.frames.median, 1900, "median frames")
+    check.eq(combined.deaths_at[1120], 3, "deaths at the first pit")
+    check.eq(combined.deaths_at[288], 1, "deaths at the first Goomba")
   end },
 }

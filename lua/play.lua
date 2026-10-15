@@ -17,7 +17,16 @@ ffi.cdef [[
 ]]
 local SIGPIPE, SIG_IGN = 13, ffi.cast("robogamer_sighandler", 1)
 
-local policy = arg[1] or "jev"
+-- Usage: luajit lua/play.lua [jev|baseline] [--lives]
+-- --lives turns off rewinding to savestates, so Mario plays on his lives alone.
+local policy, lives_only = "jev", false
+for _, a in ipairs(arg) do
+  if a == "--lives" then
+    lives_only = true
+  else
+    policy = a
+  end
+end
 assert(policy == "jev" or policy == "baseline", "policy must be jev or baseline")
 
 local exchange_dir = root .. "/" .. config.exchange_dir
@@ -50,9 +59,9 @@ if policy == "jev" then
 end
 
 assert(os.execute(string.format(
-  "FCEUX_HOME='%s' ROBOGAMER_RUN_DIR='%s' ROBOGAMER_EXCHANGE_DIR='%s' ROBOGAMER_POLICY=%s " ..
+  "FCEUX_HOME='%s' ROBOGAMER_RUN_DIR='%s' ROBOGAMER_EXCHANGE_DIR='%s' ROBOGAMER_POLICY=%s ROBOGAMER_REWINDS=%d " ..
   "'%s' --loadlua '%s/lua/main.lua' '%s/roms/smb.nes' >'%s/fceux.log' 2>&1 &",
-  fceux_home, run_dir, exchange_dir, policy, fceux, root, root, run_dir)) == 0)
+  fceux_home, run_dir, exchange_dir, policy, lives_only and 0 or 1, fceux, root, root, run_dir)) == 0)
 
 io.stdout:setvbuf("line")
 print("run " .. run_dir)

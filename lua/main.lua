@@ -12,6 +12,8 @@ local json = require("vendor.dkjson")
 local run_dir = assert(os.getenv("ROBOGAMER_RUN_DIR"), "start runs with `mise run play`")
 local exchange_dir = assert(os.getenv("ROBOGAMER_EXCHANGE_DIR"))
 local policy = assert(os.getenv("ROBOGAMER_POLICY"))
+-- Without rewinds Mario plays on his lives until the level ends or the game is over.
+local rewinds = os.getenv("ROBOGAMER_REWINDS") ~= "0"
 
 local box = mailbox.open(exchange_dir, run_dir .. "/results")
 local pad = controller.new(config.controller)
@@ -133,7 +135,7 @@ local saved_frame, deaths_since_save = 0, 0
 
 -- Only saves while Mario stands alive on the ground, so no savestate is mid-fall into a pit.
 local function save_checkpoint(facts)
-  if facts.screen ~= "playing" or facts.dying or facts.in_air or frame - saved_frame < checkpoint_frames then
+  if not rewinds or facts.screen ~= "playing" or facts.dying or facts.in_air or frame - saved_frame < checkpoint_frames then
     return
   end
   local state = savestate.create()
@@ -217,7 +219,7 @@ end
 
 local ticks = assert(io.open(exchange_dir .. "/ticks", "rb"))
 emu.speedmode("nothrottle")
-log({ type = "start", policy = policy })
+log({ type = "start", policy = policy, rewinds = rewinds })
 while ticks:read(1) and play_frame() do
 end
 
