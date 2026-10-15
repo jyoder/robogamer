@@ -1,5 +1,5 @@
 -- Summarizes a run directory: call results, answer freshness, how far Mario got and where he died.
-local json = require("vendor.dkjson")
+local run_log = require("run_log")
 
 local report = {}
 
@@ -17,36 +17,10 @@ local function percentile(values, p)
   return values[math.max(1, math.ceil(#values * p))]
 end
 
-local function read_lines(path)
-  local lines = {}
-  local f = io.open(path)
-  if f then
-    for line in f:lines() do
-      lines[#lines + 1] = line
-    end
-    f:close()
-  end
-  return lines
-end
-
-local function read_results(dir)
-  local results = {}
-  local listing = io.popen("ls '" .. dir .. "' 2>/dev/null")
-  for name in listing:lines() do
-    if name:match("^%d+%.json$") then
-      local f = io.open(dir .. "/" .. name)
-      results[#results + 1] = json.decode(f:read("*a"))
-      f:close()
-    end
-  end
-  listing:close()
-  return results
-end
-
 function report.summarize(run_dir)
   local summary = { deaths_at = {}, deaths = 0, furthest_x = 0, errors = {}, calls = 0, failed = 0, applied = 0 }
   local latencies, ages = {}, {}
-  for _, result in ipairs(read_results(run_dir .. "/results")) do
+  for _, result in ipairs(run_log.results(run_dir)) do
     summary.calls = summary.calls + 1
     if result.error then
       summary.failed = summary.failed + 1
@@ -55,8 +29,7 @@ function report.summarize(run_dir)
       latencies[#latencies + 1] = result.latency_ms
     end
   end
-  for _, line in ipairs(read_lines(run_dir .. "/events.jsonl")) do
-    local event = json.decode(line)
+  for _, event in ipairs(run_log.events(run_dir)) do
     if event.type == "applied" then
       summary.applied = summary.applied + 1
       ages[#ages + 1] = event.age

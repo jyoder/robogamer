@@ -33,11 +33,21 @@ function telemetry.read(readbyte)
   }
 end
 
+local function death_cause(snapshot)
+  if DYING_STATES[snapshot.player_state] then
+    return "enemy"
+  elseif snapshot.y_page > LOWEST_ONSCREEN_Y_PAGE then
+    return "pit"
+  end
+end
+
 function telemetry.facts(snapshot)
+  local cause = death_cause(snapshot)
   return {
     screen = SCREENS[snapshot.mode],
     in_air = IN_AIR_FLOATS[snapshot.float_state] or false,
-    dying = DYING_STATES[snapshot.player_state] or snapshot.y_page > LOWEST_ONSCREEN_Y_PAGE,
+    dying = cause ~= nil,
+    death_cause = cause,
     level_complete = snapshot.float_state == FLAGPOLE_FLOAT,
   }
 end

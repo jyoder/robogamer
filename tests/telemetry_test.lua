@@ -53,6 +53,11 @@ return {
     check.eq(telemetry.facts(snapshot({ player_state = 0x08, y_page = 2 })).dying, true, "below the screen")
     check.eq(telemetry.facts(snapshot({ player_state = 0x08, y_page = 1 })).dying, false, "normal on screen")
   end },
+  { "death_cause tells an enemy hit from a fall into a pit", function()
+    check.eq(telemetry.facts(snapshot({ player_state = 0x0B, y_page = 1 })).death_cause, "enemy", "hit")
+    check.eq(telemetry.facts(snapshot({ player_state = 0x08, y_page = 2 })).death_cause, "pit", "fall")
+    check.eq(telemetry.facts(snapshot({ player_state = 0x08, y_page = 1 })).death_cause, nil, "alive")
+  end },
   { "level_complete is true only on the flagpole", function()
     check.eq(telemetry.facts(snapshot({ float_state = 0 })).level_complete, false, "float 0")
     check.eq(telemetry.facts(snapshot({ float_state = 1 })).level_complete, false, "float 1")

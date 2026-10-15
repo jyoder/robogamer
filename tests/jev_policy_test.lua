@@ -11,6 +11,7 @@ local function observation()
     stuck = false,
     in_air = true,
     screen = "playing",
+    died_near_here = { "fell into a pit" },
   }
 end
 
@@ -32,6 +33,7 @@ return {
     check.eq(state.stuck, false, "stuck")
     check.eq(state.in_air, true, "in_air")
     check.eq(state.screen, "playing", "screen")
+    check.eq(state.died_near_here[1], "fell into a pit", "died_near_here")
   end },
   { "asks one Choice for the direction pad and a Noul per button and diagnostic", function()
     local questions = jev_policy.build(observation()).questions

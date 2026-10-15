@@ -25,6 +25,8 @@ return {
   checkpoint_seconds = 5,
   deaths_per_checkpoint = 3,
   max_deaths = 30,
+  -- Jobs list how Mario died from `behind` pixels behind him to `ahead` pixels ahead, newest `keep`.
+  death_memory = { behind = 64, ahead = 256, keep = 3 },
 
   max_run_seconds = 420,
   worker_idle_seconds = 30,

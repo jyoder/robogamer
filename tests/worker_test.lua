@@ -80,6 +80,24 @@ local function check_error(err, expected, label)
 end
 
 return {
+  { "with a frames_dir, keeps each PNG sent and the job in the result", function()
+    local box = fresh_box()
+    write_frames(box)
+    local frames_dir = box.results_dir .. "/../frames"
+    assert(os.execute("mkdir -p '" .. frames_dir .. "'") == 0)
+    local client = fake_client({ answers = ANSWERS })
+    worker.new({ id = "w1", box = box, client = client, frames_dir = frames_dir }):handle(job(3, 40, 44))
+
+    for _, frame in ipairs({ 40, 44 }) do
+      local f = assert(io.open(worker.png_path(frames_dir, frame), "rb"), "kept frame " .. frame)
+      local rgb = COLORS[frame]
+      check.eq(typesafe.png_asset(f:read("*a")).data_base64, solid_png_base64(rgb[1], rgb[2], rgb[3]), "frame " .. frame)
+      f:close()
+    end
+    local result = box:read_result(3)
+    check.eq(result.job.frames[1].frame, 40, "job frames")
+    check.eq(result.job.progress_recently, "moved_right", "job state")
+  end },
   { "a job posts the decoded controls and diagnostics", function()
     local box = fresh_box()
     write_frames(box)

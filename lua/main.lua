@@ -29,7 +29,22 @@ local shots, has_shot = {}, {}
 local posted_frame = {}
 local seq, applied_seq, applied_frame = 0, 0, 0
 
-local function post_job(facts)
+local DEATH_TEXT = { pit = "fell into a pit", enemy = "was hit by an enemy" }
+local deaths_seen = {}
+
+local function died_near(x)
+  local memory = config.death_memory
+  local near = {}
+  for i = #deaths_seen, 1, -1 do
+    local death = deaths_seen[i]
+    if death.x >= x - memory.behind and death.x <= x + memory.ahead and #near < memory.keep then
+      table.insert(near, 1, DEATH_TEXT[death.cause])
+    end
+  end
+  return near
+end
+
+local function post_job(facts, x)
   box:write_frame(frame, gui.gdscreenshot())
   shots[#shots + 1] = frame
   has_shot[frame] = true
@@ -58,6 +73,7 @@ local function post_job(facts)
     stuck = tracker:stuck(frame),
     in_air = facts.in_air,
     screen = facts.screen,
+    died_near_here = died_near(x),
   })
 end
 
@@ -153,7 +169,8 @@ local function play_frame()
   end
   if dying and not was_dying then
     deaths = deaths + 1
-    log({ type = "death", x = snapshot.x, furthest_x = furthest_x, rewound = #checkpoints > 0 })
+    deaths_seen[#deaths_seen + 1] = { x = snapshot.x, cause = facts.death_cause }
+    log({ type = "death", x = snapshot.x, cause = facts.death_cause, furthest_x = furthest_x, rewound = #checkpoints > 0 })
     if deaths >= config.max_deaths then
       return false
     end
@@ -175,7 +192,7 @@ local function play_frame()
 
   if policy == "jev" then
     if frame % config.call_every_frames == 0 then
-      post_job(facts)
+      post_job(facts, snapshot.x)
     end
     apply_answers(facts)
     rearm_jump(facts)

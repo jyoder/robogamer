@@ -17,7 +17,7 @@ jev_policy.DPAD = {
 }
 
 jev_policy.BUTTONS = {
-  { "a", "The A button makes Mario jump, and holding it while he rises makes the jump higher and longer. In the newest frame in `frames`, does Mario need to be jumping now? Yes when he is about to run into an enemy such as a Goomba or Koopa, or be stopped by a pipe or wall ahead of him. Yes when a gap or pit in the ground is coming up ahead of him: he has to jump early, before he reaches its edge, because the controller responds a moment late. Also yes while Mario is rising in a jump. No when the ground ahead of Mario is clear." },
+  { "a", "The A button makes Mario jump, and holding it while he rises makes the jump higher and longer. In the newest frame in `frames`, does Mario need to be jumping now? Yes when he is about to run into an enemy such as a Goomba or Koopa, or be stopped by a pipe or wall ahead of him. Yes when a gap or pit in the ground is coming up ahead of him: he has to jump early, before he reaches its edge, because the controller responds a moment late. Also yes while Mario is rising in a jump. No when the ground ahead of Mario is clear. `died_near_here` lists how Mario already died around this spot; if it is not empty, what Mario did last time here did not work." },
   { "b", "Should the B button be held down right now? Holding B makes Mario run faster, which lets him jump farther. With the fire flower power-up, pressing B throws a fireball." },
   { "start", "Should the Start button be held down right now? Start begins the game from the title screen and pauses or unpauses during play." },
   { "select", "Should the Select button be held down right now? Select chooses between one and two players on the title screen and does nothing during play." },
@@ -55,6 +55,7 @@ end
 --   progress_recently: "moved_right" | "no_progress" | "moved_left"
 --   stuck, in_air: booleans
 --   screen: "title" | "playing" | "game_over"
+--   died_near_here: array of text, e.g. { "fell into a pit" }, oldest first
 -- Returns a request for typesafe Client:systemone.
 function jev_policy.build(observation)
   local frames, assets = {}, {}
@@ -81,6 +82,7 @@ function jev_policy.build(observation)
       stuck = observation.stuck,
       in_air = observation.in_air,
       screen = observation.screen,
+      died_near_here = observation.died_near_here,
     },
     questions = questions,
     assets = assets,

@@ -23,6 +23,10 @@ run = "luajit lua/play.lua jev"
 description = "Play World 1-1 with the scripted baseline (hold right and B, jump every second)"
 run = "luajit lua/play.lua baseline"
 
+[tasks.score]
+description = "Score the current prompt against labeled moments from runs that kept their frames"
+run = "luajit lua/score.lua"
+
 [tasks.report]
 description = "Summarize a run (defaults to the newest in runs/)"
 env = { LUA_PATH = "lua/?.lua;;" }

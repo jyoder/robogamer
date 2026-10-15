@@ -27,9 +27,11 @@ local ticks_path = exchange_dir .. "/ticks"
 assert(os.execute(string.format("mkfifo '%s'", ticks_path)) == 0)
 
 if policy == "jev" then
+  local frames_dir = run_dir .. "/frames"
+  assert(os.execute(string.format("mkdir -p '%s'", frames_dir)) == 0)
   for i = 1, config.workers do
-    assert(os.execute(string.format("luajit '%s/lua/worker.lua' w%d '%s' '%s' 2>>'%s/workers.log' &",
-      root, i, exchange_dir, box.results_dir, run_dir)) == 0)
+    assert(os.execute(string.format("luajit '%s/lua/worker.lua' w%d '%s' '%s' '%s' 2>>'%s/workers.log' &",
+      root, i, exchange_dir, box.results_dir, frames_dir, run_dir)) == 0)
   end
 end
 
