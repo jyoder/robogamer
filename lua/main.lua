@@ -25,20 +25,23 @@ local function log(event)
 end
 
 local oldest_frame_ago = math.max(unpack(config.frames_ago))
-local shots = {}
+local shots, has_shot = {}, {}
 local posted_frame = {}
 local seq, applied_seq, applied_frame = 0, 0, 0
 
 local function post_job(facts)
   box:write_frame(frame, gui.gdscreenshot())
   shots[#shots + 1] = frame
+  has_shot[frame] = true
   while shots[1] < frame - oldest_frame_ago - config.max_staleness_frames do
-    box:remove_frame(table.remove(shots, 1))
+    local old = table.remove(shots, 1)
+    has_shot[old] = nil
+    box:remove_frame(old)
   end
 
   local frames = {}
   for _, ago in ipairs(config.frames_ago) do
-    if frame - ago >= shots[1] then
+    if has_shot[frame - ago] then
       frames[#frames + 1] = { frame = frame - ago, seconds_ago = ago / config.fps }
     end
   end
@@ -105,12 +108,40 @@ local function joypad_for(facts)
   return keys
 end
 
-local ticks = assert(io.open(exchange_dir .. "/ticks", "rb"))
-emu.speedmode("nothrottle")
-log({ type = "start", policy = policy })
+local checkpoint_frames = math.floor(config.checkpoint_seconds * config.fps)
+local checkpoints = {}
+local saved_frame, deaths_since_save = 0, 0
 
-local was_dying, life_max_x = false, 0
-while ticks:read(1) do
+-- Only saves while Mario stands alive on the ground, so no savestate is mid-fall into a pit.
+local function save_checkpoint(facts)
+  if facts.screen ~= "playing" or facts.dying or facts.in_air or frame - saved_frame < checkpoint_frames then
+    return
+  end
+  local state = savestate.create()
+  savestate.save(state)
+  checkpoints[#checkpoints + 1] = state
+  if #checkpoints > 2 then
+    table.remove(checkpoints, 1)
+  end
+  saved_frame, deaths_since_save = frame, 0
+end
+
+local function rewind()
+  deaths_since_save = deaths_since_save + 1
+  if deaths_since_save >= config.deaths_per_checkpoint and #checkpoints > 1 then
+    table.remove(checkpoints)
+    deaths_since_save = 0
+  end
+  savestate.load(checkpoints[#checkpoints])
+  pad:reset(frame)
+  tracker:reset()
+  saved_frame = frame
+end
+
+local was_dying, furthest_x, deaths = false, 0, 0
+
+-- Plays one frame; returns false when the run is over.
+local function play_frame()
   frame = frame + 1
   local snapshot = telemetry.read(memory.readbyte)
   local facts = telemetry.facts(snapshot)
@@ -118,21 +149,29 @@ while ticks:read(1) do
 
   local dying = facts.screen == "playing" and facts.dying
   if facts.screen == "playing" and not dying then
-    life_max_x = math.max(life_max_x, snapshot.x)
+    furthest_x = math.max(furthest_x, snapshot.x)
   end
   if dying and not was_dying then
-    log({ type = "death", x = snapshot.x, max_x = life_max_x, lives = snapshot.lives })
-    life_max_x = 0
+    deaths = deaths + 1
+    log({ type = "death", x = snapshot.x, furthest_x = furthest_x, rewound = #checkpoints > 0 })
+    if deaths >= config.max_deaths then
+      return false
+    end
+    if #checkpoints > 0 then
+      rewind()
+      return true
+    end
   end
   was_dying = dying
   if facts.level_complete then
-    log({ type = "level_complete", max_x = life_max_x })
-    break
+    log({ type = "level_complete" })
+    return false
   end
   if facts.screen == "game_over" then
     log({ type = "game_over" })
-    break
+    return false
   end
+  save_checkpoint(facts)
 
   if policy == "jev" then
     if frame % config.call_every_frames == 0 then
@@ -145,8 +184,15 @@ while ticks:read(1) do
   end
   joypad.set(1, joypad_for(facts))
   emu.frameadvance()
+  return true
 end
 
-log({ type = "end", jobs_posted = seq, max_x = life_max_x })
+local ticks = assert(io.open(exchange_dir .. "/ticks", "rb"))
+emu.speedmode("nothrottle")
+log({ type = "start", policy = policy })
+while ticks:read(1) and play_frame() do
+end
+
+log({ type = "end", jobs_posted = seq, furthest_x = furthest_x, deaths = deaths })
 events:close()
 box:request_stop()

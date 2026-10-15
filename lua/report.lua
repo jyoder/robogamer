@@ -1,10 +1,13 @@
--- Summarizes a run directory: call results, answer freshness and how far Mario got on each life.
+-- Summarizes a run directory: call results, answer freshness, how far Mario got and where he died.
 local json = require("vendor.dkjson")
 
 local report = {}
 
--- Level x where Mario is clear of World 1-1's first Goomba, just before the first pipe.
-report.FIRST_GOOMBA_CLEARED_X = 430
+-- Level x of World 1-1's flagpole.
+report.LEVEL_END_X = 3168
+
+-- Deaths are grouped into spots two blocks wide.
+local DEATH_SPOT_WIDTH = 32
 
 local function percentile(values, p)
   if #values == 0 then
@@ -41,7 +44,7 @@ local function read_results(dir)
 end
 
 function report.summarize(run_dir)
-  local summary = { lives = {}, errors = {}, calls = 0, failed = 0, applied = 0 }
+  local summary = { deaths_at = {}, deaths = 0, furthest_x = 0, errors = {}, calls = 0, failed = 0, applied = 0 }
   local latencies, ages = {}, {}
   for _, result in ipairs(read_results(run_dir .. "/results")) do
     summary.calls = summary.calls + 1
@@ -57,23 +60,22 @@ function report.summarize(run_dir)
     if event.type == "applied" then
       summary.applied = summary.applied + 1
       ages[#ages + 1] = event.age
-    elseif event.type == "death" or event.type == "level_complete" or event.type == "end" then
-      if event.max_x > 0 then
-        summary.lives[#summary.lives + 1] = { max_x = event.max_x, ended_by = event.type }
-      end
-      summary.jobs_posted = event.jobs_posted or summary.jobs_posted
+    elseif event.type == "death" then
+      summary.deaths = summary.deaths + 1
+      local spot = math.floor(event.x / DEATH_SPOT_WIDTH) * DEATH_SPOT_WIDTH
+      summary.deaths_at[spot] = (summary.deaths_at[spot] or 0) + 1
+      summary.furthest_x = math.max(summary.furthest_x, event.furthest_x)
+    elseif event.type == "level_complete" then
+      summary.level_complete = true
+    elseif event.type == "end" then
+      summary.jobs_posted = event.jobs_posted
+      summary.furthest_x = math.max(summary.furthest_x, event.furthest_x)
     elseif event.type == "start" then
       summary.policy = event.policy
     end
   end
   summary.latency_ms = { median = percentile(latencies, 0.5), p90 = percentile(latencies, 0.9) }
   summary.age_frames = { median = percentile(ages, 0.5), p90 = percentile(ages, 0.9) }
-  summary.cleared_first_goomba = 0
-  for _, life in ipairs(summary.lives) do
-    if life.max_x >= report.FIRST_GOOMBA_CLEARED_X then
-      summary.cleared_first_goomba = summary.cleared_first_goomba + 1
-    end
-  end
   return summary
 end
 
@@ -87,10 +89,17 @@ function report.print(run_dir)
   end
   print(string.format("  latency ms median %s p90 %s", tostring(s.latency_ms.median), tostring(s.latency_ms.p90)))
   print(string.format("  answer age frames median %s p90 %s", tostring(s.age_frames.median), tostring(s.age_frames.p90)))
-  for i, life in ipairs(s.lives) do
-    print(string.format("  life %d: reached x=%d (%s)", i, life.max_x, life.ended_by))
+  print(string.format("  furthest x %d of about %d%s", s.furthest_x, report.LEVEL_END_X,
+    s.level_complete and ", level complete" or ""))
+  local spots = {}
+  for spot in pairs(s.deaths_at) do
+    spots[#spots + 1] = spot
   end
-  print(string.format("  lives clearing the first Goomba: %d of %d", s.cleared_first_goomba, #s.lives))
+  table.sort(spots)
+  print(string.format("  deaths %d", s.deaths))
+  for _, spot in ipairs(spots) do
+    print(string.format("    x %d-%d: %d", spot, spot + DEATH_SPOT_WIDTH - 1, s.deaths_at[spot]))
+  end
 end
 
 if arg and arg[0] and arg[0]:match("report%.lua$") then

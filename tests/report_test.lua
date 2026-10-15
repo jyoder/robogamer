@@ -26,10 +26,11 @@ local function fixture_run()
     { type = "applied", age = 9 },
     { type = "applied", age = 11 },
     { type = "applied", age = 14 },
-    { type = "death", max_x = 297 },
-    { type = "death", max_x = 0 },
-    { type = "level_complete", max_x = 3100 },
-    { type = "end", jobs_posted = 40, max_x = 0 },
+    { type = "death", x = 297, furthest_x = 297 },
+    { type = "death", x = 1139, furthest_x = 1139 },
+    { type = "death", x = 1140, furthest_x = 1150 },
+    { type = "level_complete" },
+    { type = "end", jobs_posted = 40, furthest_x = 3168 },
   }
   local lines = {}
   for i, event in ipairs(events) do
@@ -55,11 +56,12 @@ return {
     check.eq(s.applied, 3, "applied")
     check.eq(s.age_frames.median, 11, "age median")
   end },
-  { "lists lives that moved and counts those clearing the first Goomba", function()
+  { "groups deaths by spot and reports the furthest x and level completion", function()
     local s = report.summarize(fixture_run())
-    check.eq(#s.lives, 2, "lives")
-    check.eq(s.lives[1].max_x, 297, "first life")
-    check.eq(s.lives[2].ended_by, "level_complete", "second life end")
-    check.eq(s.cleared_first_goomba, 1, "cleared")
+    check.eq(s.deaths, 3, "deaths")
+    check.eq(s.deaths_at[288], 1, "deaths near the first Goomba")
+    check.eq(s.deaths_at[1120], 2, "deaths at the first pit")
+    check.eq(s.furthest_x, 3168, "furthest x")
+    check.eq(s.level_complete, true, "level complete")
   end },
 }

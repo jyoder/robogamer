@@ -20,6 +20,12 @@ return {
   controller = { press_at = 0.6, release_at = 0.4, history_seconds = 3, allow_start_in_level = false },
   tracker = { window_frames = 60, stuck_frames = 120, min_progress = 8 },
 
+  -- A death rewinds to a savestate taken every checkpoint_seconds instead of costing a life. After
+  -- deaths_per_checkpoint deaths from the same savestate, it falls back to the one before.
+  checkpoint_seconds = 5,
+  deaths_per_checkpoint = 3,
+  max_deaths = 30,
+
   max_run_seconds = 420,
   worker_idle_seconds = 30,
   exchange_dir = "tmp",
