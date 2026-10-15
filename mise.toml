@@ -3,6 +3,8 @@ luajit = "2.1.1744318430"
 
 [env]
 _.file = ".env"
+# Homebrew's fceux needs qtbase's plugins even when another Qt is the one linked into the prefix.
+QT_PLUGIN_PATH = "/opt/homebrew/opt/qtbase/share/qt/plugins"
 
 [tasks.test]
 description = "Run unit tests"
@@ -12,3 +14,16 @@ run = "luajit tests/run.lua"
 description = "Run unit tests plus live calls to the TypeSafe API"
 env = { LIVE = "1" }
 run = "luajit tests/run.lua"
+
+[tasks.play]
+description = "Let Jev play World 1-1 in FCEUX in real time"
+run = "luajit lua/play.lua jev"
+
+[tasks."play:baseline"]
+description = "Play World 1-1 with the scripted baseline (hold right and B, jump every second)"
+run = "luajit lua/play.lua baseline"
+
+[tasks.report]
+description = "Summarize a run (defaults to the newest in runs/)"
+env = { LUA_PATH = "lua/?.lua;;" }
+run = "luajit lua/report.lua"

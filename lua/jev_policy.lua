@@ -17,7 +17,7 @@ jev_policy.DPAD = {
 }
 
 jev_policy.BUTTONS = {
-  { "a", "Should the A button be held down right now? A makes Mario jump. Holding A longer makes the jump higher. A has to be released before Mario can jump again, so if A is already held and Mario is on the ground, it must be released first." },
+  { "a", "The A button makes Mario jump, and holding it while he rises makes the jump higher and longer. In the newest frame in `frames`, does Mario need to be jumping now? Yes when he is about to run into an enemy such as a Goomba or Koopa, or be stopped by a pipe or wall ahead of him. Yes when a gap or pit in the ground is coming up ahead of him: he has to jump early, before he reaches its edge, because the controller responds a moment late. Also yes while Mario is rising in a jump. No when the ground ahead of Mario is clear." },
   { "b", "Should the B button be held down right now? Holding B makes Mario run faster, which lets him jump farther. With the fire flower power-up, pressing B throws a fireball." },
   { "start", "Should the Start button be held down right now? Start begins the game from the title screen and pauses or unpauses during play." },
   { "select", "Should the Select button be held down right now? Select chooses between one and two players on the title screen and does nothing during play." },
