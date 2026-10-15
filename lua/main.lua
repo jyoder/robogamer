@@ -208,13 +208,7 @@ local function play_frame()
   end
   local keys = joypad_for(facts)
   if policy == "jev" then
-    overlay.draw(gui, {
-      result = applied_result,
-      frame = frame,
-      keys = keys,
-      press_at = config.controller.press_at,
-      stuck = tracker:stuck(frame),
-    })
+    overlay.draw(gui, { result = applied_result, keys = keys, press_at = config.controller.press_at })
   end
   joypad.set(1, keys)
   emu.frameadvance()

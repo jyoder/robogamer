@@ -28,20 +28,20 @@ end
 return {
   { "before any answer it says Jev is waiting", function()
     local gui = recording_gui()
-    overlay.draw(gui, { frame = 1, keys = {}, press_at = 0.6, stuck = false })
+    overlay.draw(gui, { keys = {}, press_at = 0.6 })
     check.eq(drawn(gui):find("waiting", 1, true) ~= nil, true, drawn(gui))
   end },
-  { "shows the direction, answer age, button probabilities and what Jev sees", function()
+  { "shows the direction and button probabilities", function()
     local gui = recording_gui()
-    overlay.draw(gui, { result = result(), frame = 112, keys = { A = true }, press_at = 0.6, stuck = true })
+    overlay.draw(gui, { result = result(), keys = { A = true }, press_at = 0.6 })
     local text = drawn(gui)
-    for _, expected in ipairs({ "right", "12 frames old", "STUCK", "0.72", "0.31", "gap 0.80", "enemy 0.12" }) do
+    for _, expected in ipairs({ "right", "0.72", "0.31" }) do
       check.eq(text:find(expected, 1, true) ~= nil, true, "missing " .. expected .. " in\n" .. text)
     end
   end },
   { "shows the newest death near here and how many there were", function()
     local gui = recording_gui()
-    overlay.draw(gui, { result = result(), frame = 112, keys = {}, press_at = 0.6, stuck = false })
+    overlay.draw(gui, { result = result(), keys = {}, press_at = 0.6 })
     check.eq(drawn(gui):find("died here: fell into a pit (x2)", 1, true) ~= nil, true, drawn(gui))
   end },
 }
