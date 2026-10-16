@@ -19,7 +19,7 @@ return {
   -- Start held longer than this is released so Jev's next answer can press it again.
   start_tap_frames = 5,
 
-  controller = { press_at = 0.6, release_at = 0.4, history_seconds = 3, allow_start_in_level = false },
+  controller = { press_at = 0.5, release_at = 0.4, history_seconds = 3, allow_start_in_level = false },
   tracker = { window_frames = 60, stuck_frames = 120, min_progress = 8 },
 
   -- A death rewinds to a savestate taken every checkpoint_seconds instead of costing a life. After
