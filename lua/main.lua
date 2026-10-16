@@ -103,10 +103,20 @@ local function apply_answers(facts)
   end
 end
 
--- Mario only jumps on a fresh press of A, so A still held after he lands is released.
-local function rearm_jump(facts)
-  if not facts.in_air and pad:held_frames("a", frame) > config.grounded_a_frames then
+-- Mario only jumps on a fresh press of A, and holding A only lengthens a jump while he rises. So A is
+-- let go on the way down and pressed again on landing if Jev's latest answer still wants a jump.
+local function rearm_jump(facts, landed)
+  if facts.descending or (not facts.in_air and pad:held_frames("a", frame) > config.grounded_a_frames) then
     pad:release("a", frame)
+  elseif landed and applied_result and frame - applied_frame <= config.answer_timeout_frames then
+    pad:apply(applied_result.controls, facts.screen, frame)
+  end
+end
+
+-- The title screen only starts the game on a fresh press of Start, so a held Start becomes taps.
+local function retap_start()
+  if pad:held_frames("start", frame) > config.start_tap_frames then
+    pad:release("start", frame)
   end
 end
 
@@ -186,8 +196,9 @@ local function play_frame()
   end
   was_dying = dying
   if facts.screen == "playing" and facts.in_air and not was_in_air then
-    log({ type = "takeoff", x = snapshot.x, speed = snapshot.x_speed })
+    log({ type = "takeoff", x = snapshot.x, speed = snapshot.x_speed, jumped = facts.jumped })
   end
+  local landed = was_in_air and not facts.in_air
   was_in_air = facts.in_air
   if facts.level_complete then
     log({ type = "level_complete" })
@@ -204,7 +215,8 @@ local function play_frame()
       post_job(facts, snapshot.x)
     end
     apply_answers(facts)
-    rearm_jump(facts)
+    rearm_jump(facts, landed)
+    retap_start()
   else
     baseline(facts)
   end

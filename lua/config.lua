@@ -16,6 +16,8 @@ return {
   answer_timeout_frames = 30,
   -- A held longer than this while Mario stands on the ground is released so it can be pressed again.
   grounded_a_frames = 10,
+  -- Start held longer than this is released so Jev's next answer can press it again.
+  start_tap_frames = 5,
 
   controller = { press_at = 0.6, release_at = 0.4, history_seconds = 3, allow_start_in_level = false },
   tracker = { window_frames = 60, stuck_frames = 120, min_progress = 8 },

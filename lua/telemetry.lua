@@ -5,6 +5,7 @@ local RAM = {
   x_page = 0x006D,
   x_offset = 0x0086,
   x_speed = 0x0057,
+  y_speed = 0x009F,
   float_state = 0x001D,
   mode = 0x0770,
   player_state = 0x000E,
@@ -15,7 +16,7 @@ local RAM = {
 }
 
 local SCREENS = { [0] = "title", [1] = "playing", [2] = "playing", [3] = "game_over" }
-local IN_AIR_FLOATS = { [1] = true, [2] = true }
+local JUMP_FLOAT, LEDGE_FLOAT = 1, 2
 local FLAGPOLE_FLOAT = 3
 local DYING_STATES = { [0x0B] = true, [0x06] = true }
 local LOWEST_ONSCREEN_Y_PAGE = 1
@@ -26,10 +27,12 @@ end
 
 -- readbyte: function(address) -> number, memory.readbyte in FCEUX.
 -- x_speed is positive moving right; walking tops out near 24 and running near 40.
+-- y_speed is negative while Mario rises.
 function telemetry.read(readbyte)
   return {
     x = readbyte(RAM.x_page) * 256 + readbyte(RAM.x_offset),
     x_speed = signed(readbyte(RAM.x_speed)),
+    y_speed = signed(readbyte(RAM.y_speed)),
     float_state = readbyte(RAM.float_state),
     mode = readbyte(RAM.mode),
     player_state = readbyte(RAM.player_state),
@@ -50,9 +53,12 @@ end
 
 function telemetry.facts(snapshot)
   local cause = death_cause(snapshot)
+  local in_air = snapshot.float_state == JUMP_FLOAT or snapshot.float_state == LEDGE_FLOAT
   return {
     screen = SCREENS[snapshot.mode],
-    in_air = IN_AIR_FLOATS[snapshot.float_state] or false,
+    in_air = in_air,
+    jumped = snapshot.float_state == JUMP_FLOAT,
+    descending = in_air and snapshot.y_speed >= 0,
     dying = cause ~= nil,
     death_cause = cause,
     level_complete = snapshot.float_state == FLAGPOLE_FLOAT,

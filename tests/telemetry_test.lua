@@ -2,7 +2,7 @@ local telemetry = require("telemetry")
 local check = require("check")
 
 local function snapshot(fields)
-  local s = { x = 0, float_state = 0, mode = 1, player_state = 0x08, y_page = 1, lives = 2, world = 0, level = 0 }
+  local s = { x = 0, y_speed = 0, float_state = 0, mode = 1, player_state = 0x08, y_page = 1, lives = 2, world = 0, level = 0 }
   for key, value in pairs(fields) do
     s[key] = value
   end
@@ -23,7 +23,7 @@ return {
   { "read names each RAM value and combines the x page and offset", function()
     local memory = {
       [0x006D] = 2, [0x0086] = 0x10, [0x001D] = 1, [0x0770] = 1, [0x000E] = 0x08,
-      [0x00B5] = 1, [0x075A] = 3, [0x075F] = 0, [0x0760] = 2, [0x0057] = 0,
+      [0x00B5] = 1, [0x075A] = 3, [0x075F] = 0, [0x0760] = 2, [0x0057] = 0, [0x009F] = 0,
     }
     local s = telemetry.read(function(address) return memory[address] end)
     check.eq(s.x, 528, "x")
@@ -43,6 +43,25 @@ return {
     check.eq(telemetry.read(readbyte).x_speed, 40, "running right")
     speed = 0xF0
     check.eq(telemetry.read(readbyte).x_speed, -16, "moving left")
+  end },
+  { "read gives y_speed a sign, negative rising", function()
+    local speed = 0xFB
+    local function readbyte(address)
+      return address == 0x009F and speed or 0
+    end
+    check.eq(telemetry.read(readbyte).y_speed, -5, "rising")
+    speed = 0x03
+    check.eq(telemetry.read(readbyte).y_speed, 3, "falling")
+  end },
+  { "descending is true in the air once Mario stops rising", function()
+    check.eq(telemetry.facts(snapshot({ float_state = 1, y_speed = -4 })).descending, false, "rising")
+    check.eq(telemetry.facts(snapshot({ float_state = 1, y_speed = 0 })).descending, true, "at the top")
+    check.eq(telemetry.facts(snapshot({ float_state = 2, y_speed = 2 })).descending, true, "off a ledge")
+    check.eq(telemetry.facts(snapshot({ float_state = 0, y_speed = 0 })).descending, false, "on the ground")
+  end },
+  { "jumped tells a jump from walking off a ledge", function()
+    check.eq(telemetry.facts(snapshot({ float_state = 1 })).jumped, true, "jump")
+    check.eq(telemetry.facts(snapshot({ float_state = 2 })).jumped, false, "ledge")
   end },
   { "facts maps each game mode to a screen", function()
     check.eq(telemetry.facts(snapshot({ mode = 0 })).screen, "title", "mode 0")
